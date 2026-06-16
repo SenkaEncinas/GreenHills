@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/esp32_status_model.dart';
 import '../services/esp32_service.dart';
+import '../services/theme_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,12 +20,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _isLoading = true;
   bool _isConnected = false;
 
-  // Colores principales del tema
-  static const Color _verde = Color(0xFF1A7A4C);
-  static const Color _verdeClaro = Color(0xFF23A066);
-  static const Color _azul = Color(0xFF2563EB);
-  static const Color _fondo = Color(0xFFF0F4F2);
-  static const Color _superficie = Colors.white;
+  // Colores fijos que no cambian con la hora
+  static const Color _verdePrincipal = Color(0xFF204f10);
+  static const Color _verdeLima = Color(0xFF90af28);
+  static const Color _mauve = Color(0xFF94546f);
+  static const Color _mauveClaro = Color(0xFFb5728f);
+  static const Color _tomate = Color(0xFFd93b30);
+  static const Color _blanco = Colors.white;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnim;
@@ -31,7 +34,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -61,7 +63,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       setState(() {
         _status = newStatus;
         _isLoading = false;
-        // Si la hora no es el valor inicial, estamos conectados
         _isConnected = newStatus.hora != '--:--:--';
       });
     }
@@ -72,55 +73,61 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (mounted) setState(() => _status = updatedStatus);
   }
 
-  void _showIpDialog() {
+  void _showIpDialog(AppTheme tema) {
     final ctrl = TextEditingController(text: _esp32service.currentIp);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: _superficie,
+        backgroundColor: tema.fondo,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _verde.withOpacity(0.1),
+                color: _tomate.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
-                Icons.wifi_find_rounded,
-                color: _verde,
-                size: 20,
-              ),
+              child: Icon(Icons.wifi_find_rounded, color: _tomate, size: 20),
             ),
             const SizedBox(width: 12),
-            const Text(
+            Text(
               'Dirección IP',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              style: GoogleFonts.quicksand(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: tema.textoTitulo,
+              ),
             ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'IP local del ESP32 en tu red Wi-Fi',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
+              style: GoogleFonts.quicksand(
+                fontSize: 13,
+                color: tema.textoSubtitulo,
+              ),
             ),
             const SizedBox(height: 14),
             TextField(
               controller: ctrl,
-              keyboardType: TextInputType.text,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              style: GoogleFonts.quicksand(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: tema.textoTitulo,
+              ),
               decoration: InputDecoration(
                 hintText: '192.168.1.116',
-                prefixIcon: const Icon(Icons.lan_rounded, color: _verde),
+                prefixIcon: Icon(Icons.lan_rounded, color: _tomate),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: _verde, width: 2),
+                  borderSide: BorderSide(color: _tomate, width: 2),
                 ),
               ),
             ),
@@ -129,11 +136,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+            child: Text(
+              'Cancelar',
+              style: GoogleFonts.quicksand(
+                color: Colors.grey,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: _verde,
+              backgroundColor: _tomate,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -146,7 +159,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Navigator.pop(context);
               }
             },
-            child: const Text('Conectar'),
+            child: Text(
+              'Conectar',
+              style: GoogleFonts.quicksand(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -157,84 +173,153 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
-    return Scaffold(
-      backgroundColor: _fondo,
-      body: _isLoading
-          ? _buildLoadingScreen()
-          : CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                _buildAppBar(size),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      const SizedBox(height: 16),
-                      _buildClockCard(size),
-                      const SizedBox(height: 16),
-                      _buildLuzCard(size),
-                      const SizedBox(height: 16),
-                      _buildBombaCard(size),
-                      const SizedBox(height: 8),
-                    ]),
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
+    // 🎨 Obtener tema dinámico según hora del RTC
+    final tema = ThemeService.getThemeFromString(_status.hora);
 
-  Widget _buildLoadingScreen() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(color: _verde, strokeWidth: 3),
-          SizedBox(height: 16),
-          Text(
-            'Conectando al sistema...',
-            style: TextStyle(color: Colors.grey, fontSize: 14),
-          ),
-        ],
+    return AnimatedContainer(
+      duration: const Duration(seconds: 2),
+      color: tema.fondo,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: _isLoading
+            ? _buildLoadingScreen()
+            : Stack(
+                children: [
+                  // Logo de fondo semitransparente
+                  Positioned(
+                    bottom: -40,
+                    right: -40,
+                    child: Opacity(
+                      opacity: tema.modoOscuro ? 0.04 : 0.06,
+                      child: Image.asset(
+                        'assetss/images/logo.png',
+                        width: size.width * 0.85,
+                        height: size.width * 0.85,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                  // Contenido principal
+                  CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      _buildAppBar(size, tema),
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            const SizedBox(height: 16),
+                            _buildClockCard(size, tema),
+                            const SizedBox(height: 16),
+                            _buildLuzCard(size, tema),
+                            const SizedBox(height: 16),
+                            _buildBombaCard(size, tema),
+                            const SizedBox(height: 8),
+                          ]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
       ),
     );
   }
 
   // ══════════════════════════════════════════
-  // APP BAR con efecto blur
+  // PANTALLA DE CARGA
   // ══════════════════════════════════════════
-  Widget _buildAppBar(Size size) {
+  Widget _buildLoadingScreen() {
+    return Container(
+      color: const Color(0xFFeff2eb),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _blanco,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: _verdePrincipal.withOpacity(0.15),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Image.asset(
+                'assetss/images/logo.png',
+                width: 120,
+                height: 120,
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'cosechá',
+              style: GoogleFonts.quicksand(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: _verdePrincipal,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'conectando al sistema...',
+              style: GoogleFonts.quicksand(color: Colors.grey, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            const CircularProgressIndicator(
+              color: _verdePrincipal,
+              strokeWidth: 3,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════
+  // SECCIÓN 1 — APP BAR (blanco + tomate)
+  // ══════════════════════════════════════════
+  Widget _buildAppBar(Size size, AppTheme tema) {
     return SliverAppBar(
       expandedHeight: 110,
       pinned: true,
       stretch: true,
-      backgroundColor: _verde,
+      backgroundColor: tema.appBarFondo,
+      elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF0F5132), _verde],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
+        background: AnimatedContainer(
+          duration: const Duration(seconds: 2),
+          color: tema.appBarFondo,
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Logo / ícono
+                  // Logo
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: tema.modoOscuro
+                          ? Colors.white.withOpacity(0.1)
+                          : _tomate.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: _tomate.withOpacity(0.2)),
                     ),
-                    child: const Icon(
-                      Icons.spa_rounded,
-                      color: Colors.white,
-                      size: 26,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        'assetss/images/logo.png',
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -242,12 +327,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        'HydroGrow',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
+                      Text(
+                        'cosechá',
+                        style: GoogleFonts.quicksand(
+                          color: tema.appBarTexto,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
                           letterSpacing: -0.5,
                         ),
                       ),
@@ -261,9 +346,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 width: 7,
                                 height: 7,
                                 decoration: BoxDecoration(
-                                  color: _isConnected
-                                      ? const Color(0xFF4ADE80)
-                                      : Colors.redAccent,
+                                  color: _isConnected ? _verdeLima : _tomate,
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -271,9 +354,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            _isConnected ? 'Sistema en línea' : 'Sin conexión',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.75),
+                            _isConnected ? 'sistema en línea' : 'sin conexión',
+                            style: GoogleFonts.quicksand(
+                              color: tema.appBarTexto.withOpacity(0.6),
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
@@ -283,18 +366,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ],
                   ),
                   const Spacer(),
-                  // Botón IP
                   GestureDetector(
-                    onTap: _showIpDialog,
+                    onTap: () => _showIpDialog(tema),
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.grey.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.withOpacity(0.3)),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.settings_rounded,
-                        color: Colors.white,
+                        color: Colors.grey,
                         size: 20,
                       ),
                     ),
@@ -309,21 +392,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   // ══════════════════════════════════════════
-  // TARJETA RELOJ RTC
+  // SECCIÓN 2 — RELOJ (verde oscuro dinámico)
   // ══════════════════════════════════════════
-  Widget _buildClockCard(Size size) {
-    return Container(
+  Widget _buildClockCard(Size size, AppTheme tema) {
+    final horaInt = int.tryParse(_status.hora.split(':').first) ?? 12;
+    return AnimatedContainer(
+      duration: const Duration(seconds: 2),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F5132), _verde, _verdeClaro],
+        gradient: LinearGradient(
+          colors: [tema.tarjetaReloj1, tema.tarjetaReloj2],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: _verde.withOpacity(0.35),
+            color: tema.tarjetaReloj2.withOpacity(0.4),
             blurRadius: 18,
             offset: const Offset(0, 6),
           ),
@@ -338,38 +423,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             children: [
               Text(
                 _status.fecha,
-                style: const TextStyle(
-                  color: Colors.white70,
+                style: GoogleFonts.quicksand(
+                  color: _blanco.withOpacity(0.7),
                   fontSize: 13,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 4),
               Row(
                 children: [
-                  const Icon(
-                    Icons.calendar_today_rounded,
-                    color: Colors.white38,
-                    size: 12,
+                  Icon(
+                    ThemeService.iconoHora(horaInt),
+                    color: tema.accentClock,
+                    size: 13,
                   ),
                   const SizedBox(width: 5),
                   Text(
-                    _horaDelDia(_status.hora),
-                    style: const TextStyle(
-                      color: Colors.white54,
+                    ThemeService.nombreHora(horaInt),
+                    style: GoogleFonts.quicksand(
+                      color: tema.accentClock,
                       fontSize: 11,
-                      letterSpacing: 0.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
                     ),
                   ),
                 ],
               ),
             ],
           ),
-          // Hora grande
           Text(
             _status.hora,
-            style: TextStyle(
-              color: Colors.white,
+            style: GoogleFonts.quicksand(
+              color: _blanco,
               fontSize: size.width * 0.11,
               fontWeight: FontWeight.w800,
               fontFeatures: const [FontFeature.tabularFigures()],
@@ -381,26 +466,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  String _horaDelDia(String hora) {
-    if (hora == '--:--:--') return 'SIN SEÑAL RTC';
-    final h = int.tryParse(hora.split(':').first) ?? 0;
-    if (h >= 6 && h < 12) return 'MAÑANA';
-    if (h >= 12 && h < 18) return 'TARDE';
-    if (h >= 18 && h < 21) return 'NOCHE';
-    return 'MADRUGADA';
-  }
-
   // ══════════════════════════════════════════
-  // TARJETA LUCES (MOSFET + PWM)
+  // SECCIÓN 3 — LUCES (verde claro dinámico)
   // ══════════════════════════════════════════
-  Widget _buildLuzCard(Size size) {
+  Widget _buildLuzCard(Size size, AppTheme tema) {
     final ciclos = [
       _CicloInfo(label: '18H', modo: 1),
       _CicloInfo(label: '16H', modo: 2),
       _CicloInfo(label: '12H', modo: 3),
     ];
 
-    // Calcular horas restantes del ciclo de luz
     final horaActual =
         int.tryParse(_status.hora.split(':').elementAtOrNull(0) ?? '') ?? 0;
     final minutoActual =
@@ -411,59 +486,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ? 16
         : 12;
     final enCicloOn = horaActual < horasLuz;
-    final minutosTranscurridos = horaActual * 60 + minutoActual;
-    final minutosRestantes = enCicloOn
-        ? (horasLuz * 60 - minutosTranscurridos) // faltan X min para apagarse
-        : (24 * 60 -
-              minutosTranscurridos); // faltan X min para encenderse (medianoche)
-
-    final horasRestantes = minutosRestantes ~/ 60;
-    final minutosRestantes2 = minutosRestantes % 60;
+    final minutosTrans = horaActual * 60 + minutoActual;
+    final minutosRest = enCicloOn
+        ? (horasLuz * 60 - minutosTrans)
+        : (24 * 60 - minutosTrans);
+    final horasRest = minutosRest ~/ 60;
+    final minsRest = minutosRest % 60;
 
     return _DeviceCard(
-      accentColor: const Color(0xFFF59E0B),
+      tema: tema,
+      headerColor: tema.tarjetaLuz,
+      accentColor: tema.tarjetaLuz,
       iconData: Icons.wb_sunny_rounded,
       title: 'Iluminación',
       subtitle: 'MOSFET IRLZ44N · Ciclo fotoperiodo',
       encendido: _status.estadoLuz,
+      encendidoColor: tema.tarjetaLuz,
       children: [
-        // Indicador de ciclo (igual que la bomba)
         if (_status.modoLuz != 0)
-          Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF59E0B).withOpacity(0.07),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(0xFFF59E0B).withOpacity(0.2),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  enCicloOn ? Icons.wb_sunny_rounded : Icons.nightlight_round,
-                  color: const Color(0xFFF59E0B),
-                  size: 18,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    enCicloOn
-                        ? 'Encendida · se apaga en ${horasRestantes}h ${minutosRestantes2}min'
-                        : 'Apagada · se enciende en ${horasRestantes}h ${minutosRestantes2}min',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFFD97706),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          _buildCicloIndicator(
+            encendido: enCicloOn,
+            color: tema.tarjetaLuz,
+            colorFondo: tema.tarjetaLuz.withOpacity(0.1),
+            colorBorde: tema.tarjetaLuz.withOpacity(0.3),
+            iconOn: Icons.wb_sunny_rounded,
+            iconOff: Icons.nightlight_round,
+            textoOn: 'Encendida · se apaga en ${horasRest}h ${minsRest}min',
+            textoOff: 'Apagada · se enciende en ${horasRest}h ${minsRest}min',
           ),
-
-        // Chips de ciclo
         Row(
           children: [
             ...ciclos.map(
@@ -472,59 +522,60 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: _CicloChip(
                   label: c.label,
                   active: _status.modoLuz == c.modo,
-                  color: const Color(0xFFF59E0B),
+                  activeColor: tema.tarjetaLuz,
+                  inactiveColor: tema.tarjetaLuz.withOpacity(0.1),
+                  inactiveTextColor: tema.tarjetaLuz,
                 ),
               ),
             ),
             _CicloChip(
               label: 'MANUAL',
               active: _status.modoLuz == 0,
-              color: Colors.blueGrey,
+              activeColor: _verdePrincipal,
+              inactiveColor: tema.tarjetaLuz.withOpacity(0.1),
+              inactiveTextColor: tema.tarjetaLuz,
             ),
           ],
         ),
         const SizedBox(height: 14),
-
-        // Botones acción
         _ActionButtons(
-          accentColor: const Color(0xFFF59E0B),
+          colorCiclo: tema.tarjetaLuz,
+          colorManual: _verdePrincipal,
           onCiclo: () => _sendAction('/LUZ_CICLO'),
           onManual: () => _sendAction('/LUZ_MANUAL'),
         ),
-
-        // Slider brillo
         const SizedBox(height: 4),
-        _buildBrilloSlider(),
+        _buildBrilloSlider(tema),
       ],
     );
   }
 
-  Widget _buildBrilloSlider() {
+  Widget _buildBrilloSlider(AppTheme tema) {
     final pct = (_status.brilloLuz / 255 * 100).round();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 14),
-          child: Divider(color: Color(0xFFE5E7EB), height: 1),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Divider(color: tema.tarjetaLuz.withOpacity(0.2), height: 1),
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Row(
+            Row(
               children: [
                 Icon(
                   Icons.brightness_6_rounded,
                   size: 16,
-                  color: Color(0xFFF59E0B),
+                  color: tema.tarjetaLuz,
                 ),
-                SizedBox(width: 7),
+                const SizedBox(width: 7),
                 Text(
                   'Intensidad luminosa',
-                  style: TextStyle(
+                  style: GoogleFonts.quicksand(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF374151),
+                    color: tema.textoTitulo,
                   ),
                 ),
               ],
@@ -532,14 +583,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7),
+                color: tema.tarjetaLuz.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 '$pct%',
-                style: const TextStyle(
-                  color: Color(0xFFD97706),
-                  fontWeight: FontWeight.bold,
+                style: GoogleFonts.quicksand(
+                  color: tema.tarjetaLuz,
+                  fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
               ),
@@ -552,10 +603,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             trackHeight: 5,
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
-            activeTrackColor: const Color(0xFFF59E0B),
-            inactiveTrackColor: const Color(0xFFE5E7EB),
-            thumbColor: const Color(0xFFF59E0B),
-            overlayColor: const Color(0x29F59E0B),
+            activeTrackColor: tema.tarjetaLuz,
+            inactiveTrackColor: tema.tarjetaLuz.withOpacity(0.15),
+            thumbColor: _verdePrincipal,
+            overlayColor: tema.tarjetaLuz.withOpacity(0.2),
           ),
           child: Slider(
             value: _status.brilloLuz.toDouble(),
@@ -585,82 +636,100 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   // ══════════════════════════════════════════
-  // TARJETA BOMBA (RELÉ 45/15)
+  // SECCIÓN 4 — BOMBA (rosa/mauve dinámico)
   // ══════════════════════════════════════════
-  Widget _buildBombaCard(Size size) {
-    // Calcular minutos restantes en el ciclo
+  Widget _buildBombaCard(Size size, AppTheme tema) {
     final minuto =
         int.tryParse(_status.hora.split(':').elementAtOrNull(1) ?? '') ?? 0;
     final enCicloOn = minuto < 45;
     final minutosRestantes = enCicloOn ? (45 - minuto) : (60 - minuto);
 
     return _DeviceCard(
-      accentColor: _azul,
+      tema: tema,
+      headerColor: tema.tarjetaBomba,
+      accentColor: _mauveClaro,
       iconData: Icons.water_drop_rounded,
       title: 'Bomba de Agua',
       subtitle: 'Relé · Ciclo 45 min ON / 15 min OFF',
       encendido: _status.estadoBomba,
+      encendidoColor: tema.tarjetaBomba,
       children: [
-        // Indicador de ciclo automático
         if (_status.modoBomba == 1)
-          Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: _azul.withOpacity(0.07),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _azul.withOpacity(0.15)),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  enCicloOn
-                      ? Icons.water_rounded
-                      : Icons.pause_circle_outline_rounded,
-                  color: _azul,
-                  size: 18,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    enCicloOn
-                        ? 'Bombeando · faltan $minutosRestantes min para pausa'
-                        : 'En pausa · reinicia en $minutosRestantes min',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: _azul,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          _buildCicloIndicator(
+            encendido: enCicloOn,
+            color: tema.tarjetaBomba,
+            colorFondo: tema.tarjetaBomba.withOpacity(0.08),
+            colorBorde: tema.tarjetaBomba.withOpacity(0.25),
+            iconOn: Icons.water_rounded,
+            iconOff: Icons.pause_circle_outline_rounded,
+            textoOn: 'Bombeando · faltan $minutosRestantes min para pausa',
+            textoOff: 'En pausa · reinicia en $minutosRestantes min',
           ),
-
-        // Chips modo
         Row(
           children: [
             _CicloChip(
               label: 'AUTO 45/15',
               active: _status.modoBomba == 1,
-              color: _azul,
+              activeColor: tema.tarjetaBomba,
+              inactiveColor: tema.tarjetaBomba.withOpacity(0.1),
+              inactiveTextColor: tema.tarjetaBomba,
             ),
             const SizedBox(width: 8),
             _CicloChip(
               label: 'MANUAL',
               active: _status.modoBomba == 0,
-              color: Colors.blueGrey,
+              activeColor: _mauveClaro,
+              inactiveColor: tema.tarjetaBomba.withOpacity(0.1),
+              inactiveTextColor: tema.tarjetaBomba,
             ),
           ],
         ),
         const SizedBox(height: 14),
         _ActionButtons(
-          accentColor: _azul,
-          cicloLabel: 'Ciclo Auto',
+          colorCiclo: tema.tarjetaBomba,
+          colorManual: _mauveClaro,
           onCiclo: () => _sendAction('/BOMBA_CICLO'),
           onManual: () => _sendAction('/BOMBA_MANUAL'),
+          cicloLabel: 'Ciclo Auto',
         ),
       ],
+    );
+  }
+
+  Widget _buildCicloIndicator({
+    required bool encendido,
+    required Color color,
+    required Color colorFondo,
+    required Color colorBorde,
+    required IconData iconOn,
+    required IconData iconOff,
+    required String textoOn,
+    required String textoOff,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: colorFondo,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colorBorde),
+      ),
+      child: Row(
+        children: [
+          Icon(encendido ? iconOn : iconOff, color: color, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              encendido ? textoOn : textoOff,
+              style: GoogleFonts.quicksand(
+                fontSize: 12,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -676,7 +745,10 @@ class _CicloInfo {
 }
 
 class _DeviceCard extends StatelessWidget {
+  final AppTheme tema;
+  final Color headerColor;
   final Color accentColor;
+  final Color encendidoColor;
   final IconData iconData;
   final String title;
   final String subtitle;
@@ -684,7 +756,10 @@ class _DeviceCard extends StatelessWidget {
   final List<Widget> children;
 
   const _DeviceCard({
+    required this.tema,
+    required this.headerColor,
     required this.accentColor,
+    required this.encendidoColor,
     required this.iconData,
     required this.title,
     required this.subtitle,
@@ -694,13 +769,15 @@ class _DeviceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(seconds: 2),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: tema.fondo,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: accentColor.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: headerColor.withOpacity(0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -711,16 +788,15 @@ class _DeviceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Encabezado
             Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(11),
                   decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.1),
+                    color: accentColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(iconData, color: accentColor, size: 22),
+                  child: Icon(iconData, color: headerColor, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -729,23 +805,22 @@ class _DeviceCard extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
+                        style: GoogleFonts.quicksand(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF111827),
+                          color: headerColor,
                         ),
                       ),
                       Text(
                         subtitle,
-                        style: const TextStyle(
+                        style: GoogleFonts.quicksand(
                           fontSize: 11,
-                          color: Color(0xFF9CA3AF),
+                          color: tema.textoSubtitulo,
                         ),
                       ),
                     ],
                   ),
                 ),
-                // Badge estado
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   padding: const EdgeInsets.symmetric(
@@ -754,8 +829,8 @@ class _DeviceCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: encendido
-                        ? const Color(0xFFDCFCE7)
-                        : const Color(0xFFF3F4F6),
+                        ? encendidoColor.withOpacity(0.15)
+                        : Colors.grey.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -765,19 +840,15 @@ class _DeviceCard extends StatelessWidget {
                         width: 6,
                         height: 6,
                         decoration: BoxDecoration(
-                          color: encendido
-                              ? const Color(0xFF22C55E)
-                              : const Color(0xFF9CA3AF),
+                          color: encendido ? encendidoColor : Colors.grey,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 5),
                       Text(
                         encendido ? 'ON' : 'OFF',
-                        style: TextStyle(
-                          color: encendido
-                              ? const Color(0xFF15803D)
-                              : const Color(0xFF6B7280),
+                        style: GoogleFonts.quicksand(
+                          color: encendido ? headerColor : Colors.grey,
                           fontWeight: FontWeight.w700,
                           fontSize: 11,
                           letterSpacing: 0.5,
@@ -788,9 +859,9 @@ class _DeviceCard extends StatelessWidget {
                 ),
               ],
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 14),
-              child: Divider(color: Color(0xFFF3F4F6), height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Divider(color: accentColor.withOpacity(0.2), height: 1),
             ),
             ...children,
           ],
@@ -803,12 +874,16 @@ class _DeviceCard extends StatelessWidget {
 class _CicloChip extends StatelessWidget {
   final String label;
   final bool active;
-  final Color color;
+  final Color activeColor;
+  final Color inactiveColor;
+  final Color inactiveTextColor;
 
   const _CicloChip({
     required this.label,
     required this.active,
-    required this.color,
+    required this.activeColor,
+    required this.inactiveColor,
+    required this.inactiveTextColor,
   });
 
   @override
@@ -817,12 +892,12 @@ class _CicloChip extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: active ? color : const Color(0xFFF3F4F6),
+        color: active ? activeColor : inactiveColor,
         borderRadius: BorderRadius.circular(10),
         boxShadow: active
             ? [
                 BoxShadow(
-                  color: color.withOpacity(0.3),
+                  color: activeColor.withOpacity(0.3),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -831,8 +906,8 @@ class _CicloChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
-          color: active ? Colors.white : const Color(0xFF9CA3AF),
+        style: GoogleFonts.quicksand(
+          color: active ? Colors.white : inactiveTextColor,
           fontWeight: FontWeight.w700,
           fontSize: 11,
           letterSpacing: 0.3,
@@ -843,13 +918,15 @@ class _CicloChip extends StatelessWidget {
 }
 
 class _ActionButtons extends StatelessWidget {
-  final Color accentColor;
+  final Color colorCiclo;
+  final Color colorManual;
   final VoidCallback onCiclo;
   final VoidCallback onManual;
   final String cicloLabel;
 
   const _ActionButtons({
-    required this.accentColor,
+    required this.colorCiclo,
+    required this.colorManual,
     required this.onCiclo,
     required this.onManual,
     this.cicloLabel = 'Siguiente Ciclo',
@@ -859,18 +936,20 @@ class _ActionButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Botón Ciclo (outline)
         Expanded(
           child: OutlinedButton.icon(
             onPressed: onCiclo,
-            icon: const Icon(Icons.loop_rounded, size: 16),
+            icon: Icon(Icons.loop_rounded, size: 16, color: colorCiclo),
             label: Text(
               cicloLabel,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              style: GoogleFonts.quicksand(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: colorCiclo,
+              ),
             ),
             style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF4B5563),
-              side: const BorderSide(color: Color(0xFFE5E7EB)),
+              side: BorderSide(color: colorCiclo.withOpacity(0.4)),
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -879,17 +958,20 @@ class _ActionButtons extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        // Botón Manual (filled)
         Expanded(
           child: FilledButton.icon(
             onPressed: onManual,
             icon: const Icon(Icons.touch_app_rounded, size: 16),
-            label: const Text(
+            label: Text(
               'Manual',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              style: GoogleFonts.quicksand(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             style: FilledButton.styleFrom(
-              backgroundColor: accentColor,
+              backgroundColor: colorManual,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
